@@ -24,11 +24,11 @@ class DataUploader {
 
         private const val certFileName = "server.crt"
 
-        private const val host = "10.11.10.33"
+        private const val host = "10.11.13.129"
         // private const val host = "raspberrypi.local"
         private const val port = 5000
 
-        private val url = "http://${host}:${port}/api/"
+        private val url = "https://${host}:${port}/api/"
     }
 
     fun startUploading(currentDir: String, context: Context) {
