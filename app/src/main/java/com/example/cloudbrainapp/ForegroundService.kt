@@ -186,6 +186,7 @@ class ForegroundService : Service() {
     private fun onStopRecording() {
         writeLog("onStopRecording()")
 
+        fos?.flush()
         fos?.close()
         fos = null
     }
