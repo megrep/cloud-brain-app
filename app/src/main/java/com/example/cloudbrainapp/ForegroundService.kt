@@ -18,6 +18,7 @@ import android.util.Log
 import android.widget.TextView
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
+import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.*
@@ -34,13 +35,14 @@ class ForegroundService : Service() {
             AudioRecord.getMinBufferSize(samplingRate,
                 AudioFormat.CHANNEL_IN_MONO,
                 AudioFormat.ENCODING_PCM_16BIT))
-    private val powerThreshold = 0.01
+    private val powerThreshold = 0.002
     private val minRecordTime = 10.0
     private val uploader = DataUploader()
 
     private var recordingCount = 0
     private var isRecording = false
     private var fos: FileOutputStream? = null
+    private var filename: String? = null
 
     override fun onBind(intent: Intent): IBinder? {
         throw UnsupportedOperationException("Not yet implemented")
@@ -174,7 +176,7 @@ class ForegroundService : Service() {
 
     private fun onStartRecording(): FileOutputStream {
         val date = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ", Locale.UK).format(Date())
-        val filename = "${DataUploader.prefix}${date}.${DataUploader.extension}"
+        filename = "${DataUploader.prefix}${date}.${DataUploader.extension}.part"
         fos = baseContext.openFileOutput(filename, 0)
 
         writeLog("onStartRecording(): date=${date}")
@@ -189,6 +191,9 @@ class ForegroundService : Service() {
         fos?.flush()
         fos?.close()
         fos = null
+
+        val pathname = "${applicationInfo.dataDir}/files/${filename}"
+        File(pathname).renameTo(File(pathname.removeSuffix(".part")))
     }
 
     companion object {

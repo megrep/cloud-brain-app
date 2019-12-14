@@ -17,12 +17,12 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         findViewById<Button>(R.id.button).setOnClickListener {
+            if (serviceIntent != null) stopService(serviceIntent)
             serviceIntent = Intent(this, ForegroundService::class.java)
             startService(serviceIntent)
         }
 
         findViewById<Button>(R.id.buttonUpload).setOnClickListener {
-            stopService(serviceIntent)
             val broadcast = Intent()
             broadcast.setAction("startUploading")
             sendBroadcast(broadcast)

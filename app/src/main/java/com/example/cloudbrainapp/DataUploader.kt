@@ -25,7 +25,7 @@ class DataUploader {
 
         private const val certFileName = "server.crt"
 
-        private const val host = "10.11.13.129"
+        private const val host = "192.168.43.144"
         // private const val host = "raspberrypi.local"
         private const val port = 5000
 
@@ -35,8 +35,15 @@ class DataUploader {
     fun startUploading(currentDir: String, context: Context) {
         val files = dataFiles(currentDir + "/files")
         ForegroundService.writeLog("startUploading()")
-        files?.forEach{f -> ForegroundService.writeLog(f.name)}
-        files?.filter{ f -> f.isFile && f.name.endsWith(".${extension}") && f.name.startsWith(prefix) }?.forEach{ f -> upload(f, context) }
+
+        Thread {
+            files?.forEach { f -> ForegroundService.writeLog(f.name) }
+            files?.filter { f ->
+                f.isFile && f.name.endsWith(".${extension}") && f.name.startsWith(
+                    prefix
+                )
+            }?.forEach { f -> upload(f, context) }
+        }.start()
     }
 
     private fun dataFiles(currentDir: String) : Array<File>? {
@@ -57,10 +64,8 @@ class DataUploader {
             "}"
         ForegroundService.writeLog(jsonString.take(100) + "~" + jsonString.takeLast(100))
 
-        Thread {
-            doPost(url, mapOf(), jsonString, context)
-            file.delete()
-        }.start()
+        doPost(url, mapOf(), jsonString, context)
+        file.delete()
     }
 
     @Throws(IOException::class)
