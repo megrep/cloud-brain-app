@@ -157,6 +157,7 @@ class ForegroundService : Service() {
             // 録音を一定時間続けるのは音声が断片化しすぎないようにするため
             if (recordingTime > minRecordTime && power <= powerThreshold) {
                 isRecording = false
+                recordingCount = 0
                 onStopRecording()
             }
         }
