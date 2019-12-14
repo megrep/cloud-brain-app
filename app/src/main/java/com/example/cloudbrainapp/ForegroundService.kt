@@ -157,7 +157,6 @@ class ForegroundService : Service() {
             // 録音を一定時間続けるのは音声が断片化しすぎないようにするため
             if (recordingTime > minRecordTime && power <= powerThreshold) {
                 isRecording = false
-                recordingCount = 0
                 onStopRecording()
             }
         }
@@ -167,6 +166,7 @@ class ForegroundService : Service() {
             // しきい値より音圧が大きくなったら録音開始
             if (power > powerThreshold) {
                 isRecording = true
+                recordingCount = 0
                 onStartRecording()
             }
         }
