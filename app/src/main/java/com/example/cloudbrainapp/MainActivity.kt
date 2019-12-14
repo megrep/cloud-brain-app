@@ -10,20 +10,23 @@ import android.widget.Button
 import android.widget.TextView
 
 class MainActivity : AppCompatActivity() {
+    var serviceIntent: Intent? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         findViewById<Button>(R.id.button).setOnClickListener {
-            val serviceIntent = Intent(this, ForegroundService::class.java)
+            serviceIntent = Intent(this, ForegroundService::class.java)
             startService(serviceIntent)
         }
 
         findViewById<Button>(R.id.buttonUpload).setOnClickListener {
+            stopService(serviceIntent)
             val broadcast = Intent()
             broadcast.setAction("startUploading")
             sendBroadcast(broadcast)
+
         }
 
         val receiver = object : BroadcastReceiver() {
