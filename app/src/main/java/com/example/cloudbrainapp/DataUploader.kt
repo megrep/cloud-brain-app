@@ -58,6 +58,7 @@ class DataUploader {
 
         Thread {
             doPost(url, mapOf(), jsonString, context)
+            file.delete()
         }.start()
     }
 
