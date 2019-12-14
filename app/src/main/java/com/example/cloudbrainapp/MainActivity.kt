@@ -20,6 +20,12 @@ class MainActivity : AppCompatActivity() {
             startService(serviceIntent)
         }
 
+        findViewById<Button>(R.id.buttonUpload).setOnClickListener {
+            val broadcast = Intent()
+            broadcast.setAction("startUploading")
+            sendBroadcast(broadcast)
+        }
+
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
                 val extras = intent?.getExtras()

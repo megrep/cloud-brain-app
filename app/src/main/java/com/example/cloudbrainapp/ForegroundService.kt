@@ -1,12 +1,16 @@
 package com.example.cloudbrainapp
 
 import android.app.Service
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.os.IBinder
 import android.util.Log
+import android.widget.TextView
 import androidx.core.app.NotificationCompat
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
@@ -24,8 +28,9 @@ class ForegroundService : Service() {
             AudioRecord.getMinBufferSize(samplingRate,
                 AudioFormat.CHANNEL_IN_MONO,
                 AudioFormat.ENCODING_PCM_16BIT))
-    private val powerThreshold = 0.05
+    private val powerThreshold = 0.01
     private val minRecordTime = 10.0
+    private val uploader = DataUploader()
 
     private var recordingCount = 0
     private var isRecording = false
@@ -46,7 +51,7 @@ class ForegroundService : Service() {
             Runnable {
                 val audioRecord = startSensing()
 
-                Thread.sleep(1000 * 10)
+                Thread.sleep(1000 * 100)
 
                 audioRecord.stop()
 
@@ -57,6 +62,16 @@ class ForegroundService : Service() {
             }).start()
 
         startForeground(1, notification)
+
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                uploader.startUploading(applicationInfo.dataDir)
+            }
+        }
+
+        val filter = IntentFilter()
+        filter.addAction("startUploading")
+        registerReceiver(receiver, filter)
 
         return START_STICKY
     }
@@ -95,6 +110,7 @@ class ForegroundService : Service() {
     private fun sensingProcess(data: ShortArray) {
         val power = power(data)
         // sendMessage("updatePower", power.toString())
+        // writeLog("RMS: ${power}")
 
         if (isRecording) {
             // 録音中
@@ -128,17 +144,26 @@ class ForegroundService : Service() {
 
     private fun onStartRecording(): FileOutputStream {
         val date = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ", Locale.UK).format(Date())
-        val filename = date + ".bin"
+        val filename = "${DataUploader.prefix}${date}.${DataUploader.extension}"
         fos = baseContext.openFileOutput(filename, 0)
 
-        Log.v("", "onStartRecording(): date=${date}")
+        writeLog("onStartRecording(): date=${date}")
+        writeLog("current path: ${getApplicationInfo().dataDir}")
+
+        return fos!!
     }
 
     private fun onStopRecording() {
-        Log.v("", "onStopRecording()")
+        writeLog("onStopRecording()")
 
         fos?.close()
         fos = null
+    }
+
+    companion object {
+        fun writeLog(msg: String) {
+            Log.v("Brain Cloud Service", msg)
+        }
     }
 
     fun power(audioDataArray: ShortArray): Double {
