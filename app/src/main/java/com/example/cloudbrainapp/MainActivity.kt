@@ -23,13 +23,13 @@ class MainActivity : AppCompatActivity() {
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
                 val extras = intent?.getExtras()
-                val rms = extras?.getString("message")
-                findViewById<TextView>(R.id.textView).setText("RMS: ${rms}")
+                val power = extras?.getString("message")
+                findViewById<TextView>(R.id.textView).setText("Power: ${power}")
             }
         }
 
         val filter = IntentFilter()
-        filter.addAction("updateRMS")
+        filter.addAction("updatePower")
         registerReceiver(receiver, filter)
     }
 }
