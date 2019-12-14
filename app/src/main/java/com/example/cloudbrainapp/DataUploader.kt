@@ -14,6 +14,7 @@ import java.security.SecureRandom
 import java.security.cert.CertificateException
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
+import java.util.concurrent.TimeUnit
 import javax.net.ssl.*
 
 
@@ -92,7 +93,11 @@ class DataUploader {
         val tlsCon = SSLContext.getInstance("TLS")
         tlsCon.init(null, trustManager.trustManagers, SecureRandom())
 
+
         val client = OkHttpClient.Builder()
+            .connectTimeout(10, TimeUnit.HOURS)
+            .writeTimeout(10, TimeUnit.HOURS)
+            .readTimeout(10, TimeUnit.HOURS)
             .hostnameVerifier { hostname, session -> hostname == session.peerHost }
             .sslSocketFactory(tlsCon.socketFactory, object : X509TrustManager{
                 override fun checkServerTrusted( chain: Array<out X509Certificate>?, authType: String? ) {
@@ -106,6 +111,7 @@ class DataUploader {
                 }
             })
             .build()
+
         val response = client.newCall(request).execute()
         return response.body()!!.string()
     }
