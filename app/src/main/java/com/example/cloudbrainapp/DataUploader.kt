@@ -1,5 +1,6 @@
 package com.example.cloudbrainapp
 
+import android.content.Context
 import android.util.Base64
 import okhttp3.Headers
 import okhttp3.OkHttpClient
@@ -21,40 +22,42 @@ class DataUploader {
         const val extension = "bin"
         const val prefix = "recorded_"
 
-        private const val cert = ""
-        private val certIs = cert.byteInputStream()
+        private const val certFileName = "server.crt"
 
-        private const val host = "localhost"
+        private const val host = "10.11.10.33"
         // private const val host = "raspberrypi.local"
         private const val port = 5000
 
-        private val url = "https://${host}:${port}/api"
+        private val url = "http://${host}:${port}/api/"
     }
 
-    fun startUploading(currentDir: String) {
+    fun startUploading(currentDir: String, context: Context) {
         val files = dataFiles(currentDir + "/files")
         ForegroundService.writeLog("startUploading()")
         files?.forEach{f -> ForegroundService.writeLog(f.name)}
-        files?.filter{ f -> f.isFile && f.name.endsWith(".${extension}") && f.name.startsWith(prefix) }?.forEach{ f -> upload(f) }
+        files?.filter{ f -> f.isFile && f.name.endsWith(".${extension}") && f.name.startsWith(prefix) }?.forEach{ f -> upload(f, context) }
     }
 
     private fun dataFiles(currentDir: String) : Array<File>? {
         return File(currentDir).listFiles()
     }
 
-    private fun upload(file: File) {
+    private fun upload(file: File, context: Context) {
         ForegroundService.writeLog("Uploading ${file.name}")
 
         val data = file.readBytes()
-        val encoded = Base64.encode(data, Base64.DEFAULT)
+        val encoded = Base64.encodeToString(data, Base64.NO_WRAP)
         val date = file.name.removePrefix(prefix).removeSuffix(".${extension}")
 
+        val jsonString =
+            "{\n" +
+            "    \"data\": \"${encoded}\",\n" +
+            "    \"speaked_at\": \"${date}\"\n" +
+            "}"
+        ForegroundService.writeLog(jsonString.take(100) + "~" + jsonString.takeLast(100))
+
         Thread {
-            doPost(url, mapOf(),
-                "{\n" +
-                "    \"data\": \"${encoded}\",\n" +
-                "    \"speaked_at\": \"${date}\"\n" +
-                "}")
+            doPost(url, mapOf(), jsonString, context)
         }.start()
     }
 
@@ -62,7 +65,8 @@ class DataUploader {
     private fun doPost(
         url: String,
         headers: Map<String, String>,
-        jsonString: String
+        jsonString: String,
+        context: Context
     ): String {
         val mediaTypeJson = okhttp3.MediaType.parse("application/json; charset=utf-8")
 
@@ -77,70 +81,32 @@ class DataUploader {
         val ks = KeyStore.getInstance("BKS")
         ks.load(null)
         val factory = CertificateFactory.getInstance("X509")
-        val x509 = factory.generateCertificate(certIs) as X509Certificate
+        val x509 = factory.generateCertificate(context.getResources().getAssets().open(certFileName)) as X509Certificate
         val alias = x509.subjectDN.name
         ks.setCertificateEntry(alias, x509)
 
-        val trustManager = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-        trustManager.init(ks);
+        val trustManager = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
+        trustManager.init(ks)
 
         val tlsCon = SSLContext.getInstance("TLS")
         tlsCon.init(null, trustManager.trustManagers, SecureRandom())
 
         val client = OkHttpClient.Builder()
             .hostnameVerifier { hostname, session -> hostname == session.peerHost }
-            .sslSocketFactory(tlsCon.socketFactory, trustManager as X509TrustManager)
+            .sslSocketFactory(tlsCon.socketFactory, object : X509TrustManager{
+                override fun checkServerTrusted( chain: Array<out X509Certificate>?, authType: String? ) {
+                }
+
+                override fun checkClientTrusted( chain: Array<out X509Certificate>?, authType: String? ) {
+                }
+
+                override fun getAcceptedIssuers(): Array<X509Certificate> {
+                    return arrayOf(x509)
+                }
+            })
             .build()
         val response = client.newCall(request).execute()
         return response.body()!!.string()
-    }
-}
-
-object KeyStoreUtil {
-    val emptyKeyStore: KeyStore
-        @Throws(
-            KeyStoreException::class,
-            NoSuchAlgorithmException::class,
-            CertificateException::class,
-            IOException::class
-        )
-        get() {
-            val ks = KeyStore.getInstance("BKS")
-            ks.load(null)
-            return ks
-        }
-
-    @Throws(
-        KeyStoreException::class,
-        NoSuchAlgorithmException::class,
-        CertificateException::class,
-        IOException::class
-    )
-    fun loadAndroidCAStore(ks: KeyStore) {
-        val aks = KeyStore.getInstance("AndroidCAStore")
-        aks.load(null)
-        val aliases = aks.aliases()
-        while (aliases.hasMoreElements()) {
-            val alias = aliases.nextElement()
-            val cert = aks.getCertificate(alias)
-            ks.setCertificateEntry(alias, cert)
-        }
-    }
-
-    @Throws(CertificateException::class, KeyStoreException::class)
-    fun loadX509Certificate(ks: KeyStore, `is`: InputStream) {
-        try {
-            val factory = CertificateFactory.getInstance("X509")
-            val x509 = factory.generateCertificate(`is`) as X509Certificate
-            val alias = x509.subjectDN.name
-            ks.setCertificateEntry(alias, x509)
-        } finally {
-            try {
-                `is`.close()
-            } catch (e: IOException) { /* 例外処理は割愛 */
-            }
-
-        }
     }
 }
 

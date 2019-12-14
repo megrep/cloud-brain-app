@@ -65,7 +65,7 @@ class ForegroundService : Service() {
 
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
-                uploader.startUploading(applicationInfo.dataDir)
+                uploader.startUploading(applicationInfo.dataDir, baseContext)
             }
         }
 
